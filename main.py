@@ -1,6 +1,11 @@
 import sqlite3 as sq
 import os
+import time
+
+if not os.path.exists(".\data"):
+    os.makedirs("data")
 conn = sq.connect('data/Library.db')
+
 
 def create_tables():
     conn.execute('''
@@ -14,7 +19,12 @@ def create_tables():
     ''')
 
 def backup_database():
-    os.system("copy './data/Library.db' ./backups/backup"+{os.popen('date').read().strip()})
+    # while 1:
+        # try:
+            os.system("mkdir backups")
+            os.system(f'copy ".\\data\\Library.db" ".\\backups\\backup_{time.strftime("%Y%m%d_%H%M%S")}.db"')
+            # break
+        # except:
 
 def insert_books(title,author,publish_year,price):
     conn.execute("INSERT INTO books(title,author,publish_year,price) Values('%s','%s',%i,%f);"%(title,author,publish_year,price))
