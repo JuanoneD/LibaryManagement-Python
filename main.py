@@ -2,6 +2,8 @@ import sqlite3 as sq
 import pandas as pd
 import os
 import time
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 def create_tables():
     conn.execute('''
@@ -45,9 +47,33 @@ def search_author(author):
 def InsertBook():
     try:
         backup_database()
-        insert_books(input("Digite o titulo do Livro:"),input("Digite o autor do livro:"),int(input("Digite o ano de lançameto do livro:")),float(input("Digite o preço:")))
-    except:
-        print("Erro em Inserir livro:")
+        title = input("Digite o título do Livro:")
+        author = input("Digite o autor do livro:")
+
+        while True:
+            try:
+                publish_year = int(input("Digite o ano de lançamento do livro:"))
+                if publish_year > 0:
+                    break
+                else:
+                    print("O ano deve ser um número positivo.")
+            except ValueError:
+                print("Ano inválido. Insira um número inteiro.")
+
+        while True:
+            try:
+                price = float(input("Digite o preço:"))
+                if price > 0:
+                    break
+                else:
+                    print("O preço deve ser um número positivo.")
+            except ValueError:
+                print("Preço inválido. Insira um número decimal.")
+
+        insert_books(title, author, publish_year, price)
+    except Exception as e:
+        print(f"Erro em Inserir livro: {e}")
+
 
 def GetAllBooks():
     try:
@@ -89,6 +115,33 @@ def FromCSV():
     backup_database()
     df = pd.read_csv("./"+input("Escreva o nome do arquivo:"))
     df.to_sql('books',conn,if_exists="replace",index=False)
+
+def GenerateReport():
+    df = pd.read_sql_query("SELECT * FROM books", conn)
+    report_type = input("Escolha o tipo de relatório (pdf/html): ").lower()
+    
+    if report_type == 'pdf':
+        if not os.path.exists(".\\reports"):
+            os.makedirs(".\\reports")
+        filename = ".\\reports\\report_books.pdf"
+        c = canvas.Canvas(filename, pagesize=letter)
+        c.drawString(100, 750, "Relatório de Livros")
+        text = c.beginText(100, 730)
+        text.setFont("Helvetica", 12)
+        for index, row in df.iterrows():
+            text.textLine(f"ID: {row['id']}, Título: {row['title']}, Autor: {row['author']}, Ano: {row['publish_year']}, Preço: {row['price']}")
+        c.drawText(text)
+        c.save()
+        print(f"Relatório PDF gerado: {filename}")
+    
+    elif report_type == 'html':
+        if not os.path.exists(".\\reports"):
+            os.makedirs(".\\reports")
+        filename = ".\\reports\\report_books.html"
+        df.to_html(filename)
+        print(f"Relatório HTML gerado: {filename}")
+    else:
+        print("Tipo de relatório inválido.")
         
 #MAIN #############################      
 if not os.path.exists(".\\data"):
@@ -107,11 +160,12 @@ while 1:
         5. Buscar livros por autor
         6. Exportar dados para CSV
         7. Importar dados de CSV
-        8. Fazer backup do banco de dados
-        9. Sair
+        8. Gerar relatório em PDF/HTML
+        9. Fazer backup do banco de dados
+        10. Sair
     '''))
     match menu:
-        case 9:
+        case 10:
             break
         case 1:
             InsertBook()
@@ -128,6 +182,8 @@ while 1:
         case 7:
             FromCSV()
         case 8:
+            GenerateReport()
+        case 9:
             backup_database()
 
 
