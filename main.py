@@ -1,11 +1,7 @@
 import sqlite3 as sq
+import pandas as pd
 import os
 import time
-
-if not os.path.exists(".\data"):
-    os.makedirs("data")
-conn = sq.connect('data/Library.db')
-
 
 def create_tables():
     conn.execute('''
@@ -19,12 +15,14 @@ def create_tables():
     ''')
 
 def backup_database():
-    # while 1:
-        # try:
-            os.system("mkdir backups")
-            os.system(f'copy ".\\data\\Library.db" ".\\backups\\backup_{time.strftime("%Y%m%d_%H%M%S")}.db"')
-            # break
-        # except:
+    if not os.path.exists(".\\backups"):
+        os.system("mkdir backups")
+    else:
+        files = os.listdir(".\\backups")
+        if len(files)>4:
+            os.remove(".\\backups\\"+files[0])
+            
+    os.system(f'copy ".\\data\\Library.db" ".\\backups\\backup_{time.strftime("%Y%m%d_%H%M%S")}.db"')
 
 def insert_books(title,author,publish_year,price):
     conn.execute("INSERT INTO books(title,author,publish_year,price) Values('%s','%s',%i,%f);"%(title,author,publish_year,price))
@@ -46,12 +44,14 @@ def search_author(author):
 
 def InsertBook():
     try:
+        backup_database()
         insert_books(input("Digite o titulo do Livro:"),input("Digite o autor do livro:"),int(input("Digite o ano de lançameto do livro:")),float(input("Digite o preço:")))
     except:
-        print("Erro em Inserir livro")
+        print("Erro em Inserir livro:")
 
 def GetAllBooks():
     try:
+        print("Livros Disponiveis:")
         for row in get_boooks():
             print(row)
     except:
@@ -59,12 +59,14 @@ def GetAllBooks():
 
 def UpdatePriceBook():
     try:
+        backup_database()
         update_book(int(input("Digite o Id do livro:")),float(input("Digite o novo preco do livro:")))
     except:
         print("Erro ao editar livro")
 
 def RemoveBooks():
     try:
+        backup_database()
         delete_book(int(input("Digite o Id do livro a ser deletado:")))
     except:
         print("Erro ao remover")
@@ -75,6 +77,26 @@ def SearchByAuthor():
             print(row)
     except:
         print("Erro pesqisar por autor")
+        
+def ToCSV():
+    backup_database()
+    df = pd.read_sql_query("select * from books",conn)
+    if not os.path.exists(".\\exports"):
+        os.system("mkdir exports")
+    df.to_csv(".\\exports\\"+input("Escreva o nome do arquivo: "))
+    
+def FromCSV():
+    backup_database()
+    df = pd.read_csv("./"+input("Escreva o nome do arquivo:"))
+    df.to_sql('books',conn,if_exists="replace",index=False)
+        
+#MAIN #############################      
+if not os.path.exists(".\\data"):
+    os.makedirs("data")
+conn = sq.connect('data/Library.db')
+
+
+create_tables()
 
 while 1:
     menu = int(input('''
@@ -101,7 +123,11 @@ while 1:
             RemoveBooks()
         case 5:
             SearchByAuthor()
-        case 0:
+        case 6:
+            ToCSV()
+        case 7:
+            FromCSV()
+        case 8:
             backup_database()
 
 
